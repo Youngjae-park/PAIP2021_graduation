@@ -46,7 +46,7 @@ def train(train_case, model_type, encoder_name, pooling_type, loss_type, lr, bat
     writer = SummaryWriter(log_dir=os.path.join('runs', experiment_name))
     
     optimizer = optim.Adam(model.parameters(), lr=float(lr))
-    
+
     best_iou = 0.
     for step in tqdm.tqdm(range(1, 10000)):
         if multiple:
@@ -143,6 +143,7 @@ def train(train_case, model_type, encoder_name, pooling_type, loss_type, lr, bat
                         valid_img, valid_mask, valid_info = batch
                         valid_img = img.cuda()
                         valid_mask = valid_mask.cuda()
+
                     valid_outputs = model(valid_img)
 
                     if multiple:
@@ -182,7 +183,7 @@ def experiment_info(section):
     print('###############################\n')
 
 if __name__ == '__main__':
-    experiment_idx_list = [9, 10]
+    experiment_idx_list = [5, 6, 7, 8]
     for i in experiment_idx_list:
         experiment_info(f'train{i}')
 
@@ -193,7 +194,14 @@ if __name__ == '__main__':
         loss_type = parser.get(f'train{i}', 'loss_type')
         pooling_type = parser.get(f'train{i}', 'pooling_type')
         experiment_name = parser.get(f'train{i}', 'experiment_name')
-        multiple = bool(parser.get(f'train{i}', 'multiple'))
+        multiple = parser.get(f'train{i}', 'multiple')
+
+        if multiple == 'True':
+            multiple = True
+        elif multiple == 'False':
+            multiple = False
+        else:
+            print("Not valid multiple parameter!!")
 
         try:
             flag = train(f'train{i}', model_type, encoder_name, pooling_type, loss_type, learning_rate, batch_size, experiment_name, multiple)

@@ -32,8 +32,8 @@ if __name__ == '__main__':
 
     ip = IPWrapper(path=f'train{i}', is_train=False, batch_size=int(batch_size), multiple=multiple)
 
-    for step in range(10):
-        img, mask, mask_tk, info = ip.produce()
+    for batch in ip.iterator:
+        img, mask, mask_tk, info = batch
 
         fig = plt.figure()
         pool = nn.AdaptiveMaxPool2d(1)
@@ -42,17 +42,17 @@ if __name__ == '__main__':
         print(info[0])
         temp_img = img[0].permute(1,2,0)
         ax1.imshow(temp_img)
-        ax1.set_title(f'Img #{step}')
+        # ax1.set_title(f'Img #{step}')
 
         ax2 = fig.add_subplot(3, 2, 3)
         temp_mask = mask[0].permute(1,2,0)
         ax2.imshow(temp_mask)
-        ax2.set_title(f'Mask #{step}')
+        # ax2.set_title(f'Mask #{step}')
 
         ax3 = fig.add_subplot(3, 2, 4)
         temp_mask_tk = mask_tk[0].permute(1,2,0)
         ax3.imshow(temp_mask_tk)
-        ax3.set_title(f'Mask_tk #{step}')
+        # ax3.set_title(f'Mask_tk #{step}')
 
         fig.suptitle(info[0])
 
