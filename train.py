@@ -48,7 +48,7 @@ def train(train_case, model_type, encoder_name, pooling_type, loss_type, lr, bat
     optimizer = optim.Adam(model.parameters(), lr=float(lr))
     
     best_iou = 0.
-    for step in tqdm.tqdm(range(1, 5000)):
+    for step in tqdm.tqdm(range(1, 10000)):
         if multiple:
             img, mask, mask_tk, info = ip.produce()
             img = img.cuda()
@@ -80,6 +80,23 @@ def train(train_case, model_type, encoder_name, pooling_type, loss_type, lr, bat
                 seg_loss = get_L2_sloss(outputs, mask, dice_loss)
                 cls_loss = get_L2_closs(outputs, mask, ce, pool)
                 loss = seg_loss + cls_loss
+        elif loss_type == 'seg(comb)':
+            if multiple:
+                seg1_loss = get_L2_sloss(outputs, mask, dice_loss)
+                seg2_loss = get_L2_sloss(outputs, mask_tk, dice_loss)
+                loss = seg1_loss+seg2_loss
+            else:
+                print("impossible_traincase")
+                return False
+        elif loss_type == 'seg(comb)cls':
+            if multiple:
+                seg1_loss = get_L2_sloss(outputs, mask, dice_loss)
+                seg2_loss = get_L2_sloss(outputs, mask_tk, dice_loss)
+                cls_loss = get_L2_closs(outputs, mask, ce, pool)
+                loss = seg1_loss + seg2_loss + cls_loss
+            else:
+                print("impossible_traincase")
+                return False
         # print(loss)
 
         if step%10 == 0:
@@ -90,6 +107,16 @@ def train(train_case, model_type, encoder_name, pooling_type, loss_type, lr, bat
                 writer.add_scalar('train/seg_loss', seg_loss, step)
                 writer.add_scalar('train/cls_loss', cls_loss, step)
                 writer.add_scalar('train/total_loss', loss, step)
+            elif loss_type == 'seg(comb)':
+                writer.add_scalar('train/seg1_loss', seg1_loss, step)
+                writer.add_scalar('train/seg2_loss', seg2_loss, step)
+                writer.add_scalar('train/total_loss', loss, step)
+            elif loss_type == 'seg(comb)cls':
+                writer.add_scalar('train/seg1_loss', seg1_loss, step)
+                writer.add_scalar('train/seg2_loss', seg2_loss, step)
+                writer.add_scalar('train/cls_loss', cls_loss, step)
+                writer.add_scalar('train/total_loss', loss, step)
+                
             if multiple and step%100==0:
                 writer.add_images('train/img', img[:4], step)
                 writer.add_images('train/mask', mask[:4], step)
@@ -155,7 +182,7 @@ def experiment_info(section):
     print('###############################\n')
 
 if __name__ == '__main__':
-    experiment_idx_list = [5,6,7,8]
+    experiment_idx_list = [9, 10]
     for i in experiment_idx_list:
         experiment_info(f'train{i}')
 
@@ -172,6 +199,8 @@ if __name__ == '__main__':
             flag = train(f'train{i}', model_type, encoder_name, pooling_type, loss_type, learning_rate, batch_size, experiment_name, multiple)
             if flag == True:
                 time.sleep(3)
+            else:
+                print("Exception occured!!\nExperiment Failed!!")
         except Exception as ex:
             print("Error: ",ex)
             print("Skipped the experiment!!")

@@ -17,6 +17,3 @@ def get_L2_sloss(out, target, criterion):
     # target = target.permute(0,3,1,2)
     total_loss = criterion(out, target)
     return total_loss
-
-def get_closs(out, target):
-    pass
