@@ -62,75 +62,83 @@ def train(train_case, model_type, encoder_name, pooling_type, loss_type, lr, bat
         optimizer.zero_grad()
         outputs = model(img)
         
-        loss = 0.
+        total_loss = 0.
         # Setting losses
-        if loss_type == 'seg':
-            if multiple:
-                seg_loss = get_L2_sloss(outputs, mask_tk, dice_loss)
-                loss = seg_loss
-            else:
-                seg_loss = get_L2_sloss(outputs, mask, dice_loss)
-                loss = seg_loss
-        elif loss_type == 'segcls':
-            if multiple:
-                seg_loss = get_L2_sloss(outputs, mask_tk, dice_loss)
-                cls_loss = get_L2_closs(outputs, mask_tk, ce, pool)
-                loss = seg_loss + cls_loss
-            else:
-                seg_loss = get_L2_sloss(outputs, mask, dice_loss)
-                cls_loss = get_L2_closs(outputs, mask, ce, pool)
-                loss = seg_loss + cls_loss
+        if loss_type == 'seg(tk1)':
+            seg1_loss = get_L2_sloss(outputs, mask, dice_loss)
+            total_loss = seg1_loss
+            if step % 10 == 0:
+                writer.add_scalar('train/seg1_loss', seg1_loss, step)
+                writer.add_scalar('train/total_loss', total_loss, step)
+        elif loss_type == 'seg(tk2)':
+            seg2_loss = get_L2_sloss(outputs, mask_tk, dice_loss)
+            total_loss = seg2_loss
+            if step % 10 == 0:
+                writer.add_scalar('train/seg2_loss', seg2_loss, step)
+                writer.add_scalar('train/total_loss', total_loss, step)
+        elif loss_type == 'seg(tk1)cls1':
+            seg1_loss = get_L2_sloss(outputs, mask, dice_loss)
+            cls1_loss = get_L2_closs(outputs, mask, ce, pool)
+            total_loss = (seg1_loss + cls1_loss)/2
+            if step % 10 == 0:
+                writer.add_scalar('train/seg1_loss', seg1_loss, step)
+                writer.add_scalar('train/cls1_loss', cls1_loss, step)
+                writer.add_scalar('train/total_loss', total_loss, step)
+        elif loss_type == 'seg(tk2)cls2':
+            seg2_loss = get_L2_sloss(outputs, mask_tk, dice_loss)
+            cls2_loss = get_L2_closs(outputs, mask_tk, ce, pool)
+            total_loss = (seg2_loss + cls2_loss)/2
+            if step % 10 == 0:
+                writer.add_scalar('train/seg2_loss', seg2_loss, step)
+                writer.add_scalar('train/cls2_loss', cls2_loss, step)
+                writer.add_scalar('train/total_loss', total_loss, step)
         elif loss_type == 'seg(comb)':
-            if multiple:
-                seg1_loss = get_L2_sloss(outputs, mask, dice_loss)
-                seg2_loss = get_L2_sloss(outputs, mask_tk, dice_loss)
-                loss = seg1_loss+seg2_loss
-            else:
-                print("impossible_traincase")
-                return False
-        elif loss_type == 'seg(comb)cls':
-            if multiple:
-                seg1_loss = get_L2_sloss(outputs, mask, dice_loss)
-                seg2_loss = get_L2_sloss(outputs, mask_tk, dice_loss)
-                cls_loss = get_L2_closs(outputs, mask, ce, pool)
-                loss = seg1_loss + seg2_loss + cls_loss
-            else:
-                print("impossible_traincase")
-                return False
+            seg1_loss = get_L2_sloss(outputs, mask, dice_loss)
+            seg2_loss = get_L2_sloss(outputs, mask_tk, dice_loss)
+            total_loss = (seg1_loss + seg2_loss)/2
+            if step % 10 == 0:
+                writer.add_scalar('train/seg1_loss', seg1_loss, step)
+                writer.add_scalar('train/seg2_loss', seg2_loss, step)
+                writer.add_scalar('train/total_loss', total_loss, step)
+        elif loss_type == 'seg(comb)cls1':
+            seg1_loss = get_L2_sloss(outputs, mask, dice_loss)
+            seg2_loss = get_L2_sloss(outputs, mask_tk, dice_loss)
+            cls1_loss = get_L2_closs(outputs, mask, ce, pool)
+            total_loss = (seg1_loss + seg2_loss + cls1_loss)/3
+            if step % 10 == 0:
+                writer.add_scalar('train/seg1_loss', seg1_loss, step)
+                writer.add_scalar('train/seg2_loss', seg2_loss, step)
+                writer.add_scalar('train/cls1_loss', cls1_loss, step)
+                writer.add_scalar('train/total_loss', total_loss, step)
+        elif loss_type == 'seg(comb)cls2':
+            seg1_loss = get_L2_sloss(outputs, mask, dice_loss)
+            seg2_loss = get_L2_sloss(outputs, mask_tk, dice_loss)
+            cls2_loss = get_L2_closs(outputs, mask_tk, ce, pool)
+            total_loss = (seg1_loss + seg2_loss + cls2_loss)/3
+            if step % 10 == 0:
+                writer.add_scalar('train/seg1_loss', seg1_loss, step)
+                writer.add_scalar('train/seg2_loss', seg2_loss, step)
+                writer.add_scalar('train/cls2_loss', cls2_loss, step)
+                writer.add_scalar('train/total_loss', total_loss, step)
+        else:
+            print("Loss function Error Occurred!!")
+            return False
         # print(loss)
 
-        if step%10 == 0:
-            if loss_type == 'seg':
-                writer.add_scalar('train/seg_loss', seg_loss, step)
-                writer.add_scalar('train/total_loss', loss, step)
-            elif loss_type == 'segcls':
-                writer.add_scalar('train/seg_loss', seg_loss, step)
-                writer.add_scalar('train/cls_loss', cls_loss, step)
-                writer.add_scalar('train/total_loss', loss, step)
-            elif loss_type == 'seg(comb)':
-                writer.add_scalar('train/seg1_loss', seg1_loss, step)
-                writer.add_scalar('train/seg2_loss', seg2_loss, step)
-                writer.add_scalar('train/total_loss', loss, step)
-            elif loss_type == 'seg(comb)cls':
-                writer.add_scalar('train/seg1_loss', seg1_loss, step)
-                writer.add_scalar('train/seg2_loss', seg2_loss, step)
-                writer.add_scalar('train/cls_loss', cls_loss, step)
-                writer.add_scalar('train/total_loss', loss, step)
-                
-            if multiple and step%100==0:
-                writer.add_images('train/img', img[:4], step)
-                writer.add_images('train/mask', mask[:4], step)
-                writer.add_images('train/mask_tk', mask_tk[:4], step)
-                writer.add_images('train/outputs', outputs[:4], step)
-            elif not multiple and step%100==0:
-                writer.add_images('train/img', img[:4], step)
-                writer.add_images('train/mask', mask[:4], step)
-                writer.add_images('train/outputs', outputs[:4], step)
+        if multiple and step%500==0:
+            writer.add_images('train/img', img[:4], step)
+            writer.add_images('train/mask', mask[:4], step)
+            writer.add_images('train/mask_tk', mask_tk[:4], step)
+            writer.add_images('train/outputs', outputs[:4], step)
+        elif not multiple and step%500==0:
+            writer.add_images('train/img', img[:4], step)
+            writer.add_images('train/mask', mask[:4], step)
+            writer.add_images('train/outputs', outputs[:4], step)
 
-        loss.backward()
+        total_loss.backward()
         optimizer.step()
         
-        if step%200 == 0:
+        if step%500 == 0:
             with torch.no_grad():
                 model.eval()
                 for batch in valid_ip.iterator:
@@ -150,10 +158,12 @@ def train(train_case, model_type, encoder_name, pooling_type, loss_type, lr, bat
                         seg1_loss = get_L2_sloss(valid_outputs, valid_mask, dice_loss)
                         total_loss = seg1_loss
                         writer.add_scalar('valid/seg1_loss', seg1_loss, step)
+                        writer.add_scalar('valid/total_loss', total_loss, step)
                     elif loss_type == 'seg(tk2)':
                         seg2_loss = get_L2_sloss(valid_outputs, valid_mask_tk, dice_loss)
                         total_loss = seg2_loss
                         writer.add_scalar('valid/seg2_loss', seg2_loss, step)
+                        writer.add_scalar('valid/total_loss', total_loss, step)
                     elif loss_type == 'seg(tk1)cls1':
                         seg1_loss = get_L2_sloss(valid_outputs, valid_mask, dice_loss)
                         cls1_loss = get_L2_closs(valid_outputs, valid_mask, ce, pool)
