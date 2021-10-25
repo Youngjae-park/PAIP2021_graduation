@@ -33,7 +33,9 @@ def get_metrics(metric, pred, gt, pool, writer, step, FOR='train'):
             value = metric[key](pool(pred), pool(gt))
         writer.add_scalar(f'{FOR}/metric/{key}', value, step)
 
-def train(train_case, model_type, encoder_name, pooling_type, loss_type, lr, batch_size, experiment_name, multiple, patch_size=512):
+def train(train_case, model_type, encoder_name,
+          pooling_type, loss_type, lr, batch_size,
+          experiment_name, multiple, patch_size=512):
     ip = IPWrapper(path=train_case, is_train=True, batch_size=int(batch_size), multiple=multiple)
     valid_ip = IPWrapper(path=train_case, is_train=False, batch_size=int(batch_size), multiple=multiple)
 
@@ -143,7 +145,7 @@ def train(train_case, model_type, encoder_name, pooling_type, loss_type, lr, bat
             return False
 
         if step % 10 == 0:
-            get_metrics(metric, outputs, mask, pool, writer, step, For='Train')
+            get_metrics(metric, outputs, mask, pool, writer, step, FOR='Train')
 
         if multiple and step%500==0:
             writer.add_images('train/images/img', img[:4], step)
@@ -165,7 +167,10 @@ def train(train_case, model_type, encoder_name, pooling_type, loss_type, lr, bat
                 score_metric = dict()
                 for key in keys:
                     score_metric[key] = 0.
+
+                cnt = 0
                 for batch in valid_ip.iterator:
+                    cnt += 1
                     if multiple:
                         valid_img, valid_mask, valid_mask_tk, valid_info = batch
                         valid_img = valid_img.cuda()
@@ -248,19 +253,20 @@ def train(train_case, model_type, encoder_name, pooling_type, loss_type, lr, bat
                         writer.add_images('valid/images/mask', valid_mask[:4], step)
                         writer.add_images('valid/images/outputs', valid_outputs[:4], step)
 
-
                 for key in keys:
-                    score_metric[key] = score_metric[key]/valid_ip.len
+                    score_metric[key] = score_metric[key]/cnt
                     writer.add_scalar(f'valid/metric/{key}', score_metric[key], step)
 
                 if score_metric['IoU'] > best_iou:
+                    if not os.path.isdir('./saved_model'):
+                        os.makedirs('./saved_model', exist_ok=True)
                     best_iou = score_metric['IoU']
                     torch.save({'model':model,
                                 'weights':model.module.state_dict(),
                                 'metrics':score_metric,
                                 'step':step},
                                f'./saved_model/{experiment_name}_best.pth')
-
+                    print(f"model saved!! step:{step}, iou:{best_iou}")
                 valid_ip.reset_iter()
     return True
 
