@@ -278,7 +278,7 @@ def experiment_info(section):
     print('###############################\n')
 
 if __name__ == '__main__':
-    experiment_idx_list = [5, 6, 7, 8]
+    experiment_idx_list = [10, 11]
     for i in experiment_idx_list:
         experiment_info(f'train{i}')
 
