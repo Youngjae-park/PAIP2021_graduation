@@ -9,8 +9,6 @@ import torch.nn as nn
 parser = ConfigParser()
 parser.read('config.ini')
 
-
-
 def inference(train_case, model_type, encoder_name,
               pooling_type, loss_type, lr, batch_size,
               experiment_name, multiple, patch_size=512):
@@ -30,12 +28,12 @@ def inference(train_case, model_type, encoder_name,
 
     # Param setting
     patch_size = 512
-    window_step = patch_size//2
+    window_step = patch_size//4
     out_size = patch_size//16
     threshold = 0.9
 
-    cancer_list = ['Col', 'Pan', 'Pros']
-    idx_list = [46, 47, 48, 49, 50]
+    cancer_list = ['Col']#, 'Pan', 'Pros']
+    idx_list = [46]#, 47, 48, 49, 50]
 
     with torch.no_grad():
         for cancer in cancer_list:
@@ -104,10 +102,10 @@ def inference(train_case, model_type, encoder_name,
                 f_name = 'lv2_{}_{}'.format(cancer, str(idx))
                 if not os.path.isdir(s_path):
                     os.makedirs(s_path, exist_ok=True)
-                cv2.imwrite(s_path+f'{f_name}_0.25.jpg', (final_output>0.25).astype(np.int32)*255)
-                cv2.imwrite(s_path+f'{f_name}_0.5.jpg', (final_output>0.5).astype(np.int32)*255)
-                cv2.imwrite(s_path+f'{f_name}_0.75.jpg', (final_output>0.75).astype(np.int32)*255)
-                cv2.imwrite(s_path+f'{f_name}_raw.jpg', (final_output*255).astype(np.int32))
+                cv2.imwrite(s_path+f'{f_name}_0.25_w4.jpg', (final_output>0.25).astype(np.int32)*255)
+                cv2.imwrite(s_path+f'{f_name}_0.5_w4.jpg', (final_output>0.5).astype(np.int32)*255)
+                cv2.imwrite(s_path+f'{f_name}_0.75_w4.jpg', (final_output>0.75).astype(np.int32)*255)
+                cv2.imwrite(s_path+f'{f_name}_raw_w4.jpg', (final_output*255).astype(np.int32))
 
 def experiment_info(section):
     print(f"##### Experiment: {section} #####")
@@ -117,7 +115,7 @@ def experiment_info(section):
     print('###############################\n')
 
 if __name__ == "__main__":
-    experiment_idx_list = [10, 11, 9, 5, 6, 7, 8]
+    experiment_idx_list = [12,13] #, 10, 9, 5, 6, 7, 8]
     for i in experiment_idx_list:
         experiment_info(f'train{i}')
 
