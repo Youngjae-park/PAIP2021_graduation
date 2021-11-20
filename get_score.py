@@ -6,6 +6,8 @@ from configparser import ConfigParser
 from metric import threading_compute_dist_f1_score
 from postprocess import postprocess
 
+import multiprocessing
+
 import matplotlib.pyplot as plt
 from PIL import Image
 
@@ -50,6 +52,8 @@ def show_result(infos):
             cnt += 1
 
 def calc_score(model_name, line_len_threshold=[10, 16], line_act_threshold=0.75, dilate_iters=1, post_name=None):
+    print(f'{model_name}{line_len_threshold}{line_act_threshold}{dilate_iters} scoring',
+          f'process started!!')
     pred_path = f'/home/dhodwo/young/PAIP2021/results/{model_name}'
     gt_path = '/home/dhodwo/young/PAIP2021/results/GT'
     save_path = f'/home/dhodwo/young/PAIP2021/result_image/{post_name}/{model_name}'
@@ -110,14 +114,25 @@ def calc_score(model_name, line_len_threshold=[10, 16], line_act_threshold=0.75,
 
 if __name__ == '__main__':
     # experiment_idx_list = [5, 6, 7, 8, 9, 10, 11]
-    experiment_idx_list = [10, 11]
-
+    experiment_idx_list = [14]
+    process = []
     for i in experiment_idx_list:
         experiment_name = parser.get(f'train{i}', 'experiment_name')
         for len_t in [[10,20]]:
-            for act_t in [0.5]:
-                for d_iter in [0]:
+            for act_t in [0.7]:
+                for d_iter in [0, 1]:
                     post_name = f'L{len_t[0]}A{act_t}L{len_t[1]}D{d_iter}'
+                    print(post_name, experiment_name)
+                    p = multiprocessing.Process(target=calc_score, args=(experiment_name,len_t,act_t,d_iter,post_name))
+                    p.start()
+                    process.append(p)
+                    continue
+                    calc_score(experiment_name,
+                               line_len_threshold=len_t,
+                               line_act_threshold=act_t,
+                               dilate_iters=d_iter,
+                               post_name=post_name)
+                    continue
                     try:
                         calc_score(experiment_name,
                                    line_len_threshold=len_t,
@@ -126,6 +141,12 @@ if __name__ == '__main__':
                                    post_name=post_name)
                     except Exception as ex:
                         print(experiment_name, 'has error\n', ex)
+
+    for proc in process:
+        proc.join()
+
+    print("Scoring Finished!!")
+
 
     exit()
     for i in experiment_idx_list:

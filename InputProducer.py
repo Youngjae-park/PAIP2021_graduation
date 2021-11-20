@@ -17,6 +17,26 @@ from torchvision.transforms import Compose
 from torch.utils.data import Dataset, DataLoader, RandomSampler
 from transforms import RandomFlip, ToTensor, RandomFlip_3, ToTensor_3
 
+import torch
+import random
+from sklearn.model_selection import train_test_split
+
+def set_seed(random_seed=42):
+    torch.manual_seed(random_seed)
+    torch.cuda.manual_seed(random_seed)
+    torch.cuda.manual_seed_all(random_seed) # if use multi-GPU
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+    np.random.seed(random_seed)
+    random.seed(random_seed)
+
+def train_val_test_split(seed=42):
+    set_seed(random_seed=seed)
+    train_idx, test_idx = train_test_split(np.arange(1, 51), test_size=0.2, random_state=42)
+    train_idx, valid_idx = train_test_split(train_idx, test_size=0.25, random_state=42)
+    # print(train_idx, valid_idx, test_idx)
+    return train_idx, valid_idx, test_idx
+
 class IPWrapper:
     def __init__(self, path, is_train, batch_size=32, multiple=False):
         if not multiple:
@@ -47,13 +67,14 @@ class IPWrapper:
 
 class IP(Dataset):
     def __init__(self,
-                 train_case, is_train=True, multiple=False,
-                 mask={'Col':[46,47,48,49,50],'Pan':[46,47,48,49,50],'Pro':[46,47,48,49,50]}
+                 train_case, is_train=True, multiple=False
                  ):
         self.is_train = is_train
         self.multiple = multiple
         dataset_path = parser.get(train_case, 'dataset_name')
         f = h5py.File(dataset_path, 'r')
+
+        train_indices, valid_indices, test_indices = train_val_test_split()
 
         cancer = f['cancer']
         cancer = np.expand_dims(cancer, axis=-1)
@@ -63,18 +84,31 @@ class IP(Dataset):
         cancer = cancer.astype(int)
         cancer = np.squeeze(cancer)
         cancer_idx = np.asarray(f['cancer_idx']).astype(int)
-        mask_ = np.zeros(cancer.shape, dtype=bool)
-        for k, key in enumerate(mask.keys()):
-            c_flag = np.where(cancer==k, True, False)
+        mask_train = np.zeros(cancer.shape, dtype=bool)
+        mask_valid = np.zeros(cancer.shape, dtype=bool)
+
+        for t_idx in train_indices:
+            mask_train = np.where(cancer_idx == t_idx, True, mask_train)
+        for v_idx in valid_indices:
+            mask_valid = np.where(cancer_idx == v_idx, True, mask_valid)
+        # print(np.unique(cancer_idx[mask_train], return_counts=True))
+        # print(np.unique(cancer_idx[mask_valid], return_counts=True))
+
+        # for k, key in enumerate(['Col', 'Pan', 'Pro'])
             # print(k, key)
             # print(np.unique(c_flag, return_counts=True))
-            for idx in mask[key]:
-                ci_flag = np.where(cancer_idx==idx, True, False)
-                # print(np.unique(ci_flag&c_flag, return_counts=True))
-                mask_ = (c_flag & ci_flag) | mask_
+            # for idx in mask[key]:
+            #     ci_flag = np.where(cancer_idx==idx, True, False)
+            #     # print(np.unique(ci_flag&c_flag, return_counts=True))
+            #     mask_ = (c_flag & ci_flag) | mask_
+
         
-        if is_train:
-            mask_ = ~mask_
+        # if is_train:
+        #     mask_ = ~mask_
+        if is_train == 'Train':
+            mask_ = mask_train
+        elif is_train == 'Valid':
+            mask_ = mask_valid
         
         self.items = {}
         for key in f.keys():
@@ -83,8 +117,9 @@ class IP(Dataset):
         # for k in f.keys():
         #     print(k)
         # self.items = [np.asarray(f.get(k))[mask_] for k in f.keys()]
-        
-        if is_train:
+
+
+        if is_train == 'Train':
             if not multiple:
                 self.transform = Compose([
                     ToTensor(),
@@ -97,7 +132,7 @@ class IP(Dataset):
                     ToTensor_3(),
                     RandomFlip_3(),
                 ])
-        else:
+        elif is_train == 'Valid':
             if not multiple:
                 self.transform = Compose([
                     ToTensor(),
@@ -139,9 +174,9 @@ class IP(Dataset):
         
 
 if __name__ == '__main__':
-    # d_path = parser.get('train1', 'dataset_name')
+    # d_path = parser.get('train14', 'dataset_name')
     # print(d_path)
-    ip = IPWrapper(path='train1', is_train=True)
+    ip = IPWrapper(path='train14', is_train='Train')
     # ip = IP('lv0_tk1_512.hdf5', is_train=True)
     # dataloader = DataLoader(ip, batch_size=32, shuffle=True)
     # IP = iter(dataloader)
